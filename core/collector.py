@@ -29,16 +29,8 @@ def save_markets(limit: int = 50):
         cur.execute(
             """
             INSERT INTO markets (
-                condition_id,
-                question,
-                slug,
-                active,
-                closed,
-                volume,
-                liquidity,
-                raw_json,
-                created_at,
-                updated_at
+                condition_id, question, slug, active, closed,
+                volume, liquidity, raw_json, created_at, updated_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(condition_id) DO UPDATE SET
@@ -68,19 +60,11 @@ def save_markets(limit: int = 50):
         cur.execute(
             """
             INSERT INTO market_snapshots (
-                condition_id,
-                volume,
-                liquidity,
-                timestamp
+                condition_id, volume, liquidity, timestamp
             )
             VALUES (?, ?, ?, ?)
             """,
-            (
-                condition_id,
-                volume,
-                liquidity,
-                now,
-            ),
+            (condition_id, volume, liquidity, now),
         )
 
         saved += 1
@@ -126,16 +110,8 @@ def save_trades(limit: int = 100):
         cur.execute(
             """
             INSERT OR IGNORE INTO trades (
-                trade_id,
-                wallet_address,
-                condition_id,
-                market_slug,
-                side,
-                outcome,
-                price,
-                size,
-                timestamp,
-                raw_json
+                trade_id, wallet_address, condition_id, market_slug,
+                side, outcome, price, size, timestamp, raw_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -159,21 +135,14 @@ def save_trades(limit: int = 100):
             cur.execute(
                 """
                 INSERT INTO wallets (
-                    wallet_address,
-                    total_trades,
-                    first_seen,
-                    last_seen
+                    wallet_address, total_trades, first_seen, last_seen
                 )
                 VALUES (?, 1, ?, ?)
                 ON CONFLICT(wallet_address) DO UPDATE SET
                     total_trades = total_trades + 1,
                     last_seen = excluded.last_seen
                 """,
-                (
-                    wallet,
-                    timestamp,
-                    timestamp,
-                ),
+                (wallet, timestamp, timestamp),
             )
 
     conn.commit()

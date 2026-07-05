@@ -1,6 +1,7 @@
 import asyncio
 import time
 
+from core.wallets import get_top_wallets
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -211,5 +212,12 @@ def health():
         "markets_loaded": len(CACHE["markets"]),
         "last_updated": CACHE["last_updated"],
         "error": CACHE["error"],
+        "db": db_stats(),
+    }
+
+@app.get("/api/wallets")
+def api_wallets():
+    return {
+        "wallets": get_top_wallets(limit=25),
         "db": db_stats(),
     }
