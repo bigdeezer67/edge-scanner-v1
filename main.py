@@ -4,6 +4,9 @@ import requests
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from core.database import init_db, db_stats
+from core.collector import save_markets
+
 app = FastAPI(title="Edge Scanner v1")
 
 GAMMA_BASE = "https://gamma-api.polymarket.com"
@@ -17,6 +20,7 @@ CACHE = {
 
 def fetch_active_markets(limit: int = 25):
     url = f"{GAMMA_BASE}/markets"
+
     params = {
         "active": "true",
         "closed": "false",
@@ -24,6 +28,7 @@ def fetch_active_markets(limit: int = 25):
         "order": "volume",
         "ascending": "false",
     }
+
     response = requests.get(url, params=params, timeout=15)
     response.raise_for_status()
     return response.json()
@@ -40,6 +45,7 @@ def refresh_markets():
 
 @app.on_event("startup")
 def startup():
+    init_db()
     refresh_markets()
 
 
@@ -82,6 +88,7 @@ def home():
 <html>
 <head>
 <title>Edge Scanner v1</title>
+
 <style>
 body {{
     background:#0d1117;
@@ -89,29 +96,40 @@ body {{
     font-family:Arial;
     padding:30px;
 }}
+
 table {{
     width:100%;
     border-collapse:collapse;
 }}
+
 th,td {{
     border-bottom:1px solid #333;
     padding:12px;
     text-align:left;
 }}
+
 th {{
     color:#4db8ff;
 }}
+
 a {{
     color:#66ccff;
     text-decoration:none;
 }}
 </style>
+
 </head>
+
 <body>
+
 <h1>Edge Scanner v1</h1>
+
 <p>Live Polymarket Active Markets</p>
+
 {error_html}
+
 <table>
+
 <thead>
 <tr>
 <th>Market</th>
@@ -119,19 +137,26 @@ a {{
 <th>Liquidity</th>
 </tr>
 </thead>
+
 <tbody>
+
 {rows}
+
 </tbody>
+
 </table>
+
 </body>
 </html>
 """
+
     return HTMLResponse(html)
 
 
 @app.get("/api/markets")
 def api_markets():
     refresh_markets()
+
     return JSONResponse(
         {
             "markets": CACHE["markets"],
@@ -148,4 +173,17 @@ def health():
         "markets_loaded": len(CACHE["markets"]),
         "last_updated": CACHE["last_updated"],
         "error": CACHE["error"],
+    }
+
+@app.get("/api/db")
+def api_db():
+    return db_stats()
+
+@app.get("/api/collect")
+def api_collect():
+    result = save_markets(limit=50)
+    return {
+        "status": "ok",
+        "result": result,
+        "db": db_stats(),
     }
