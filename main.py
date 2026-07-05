@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from core.database import init_db, db_stats
 from core.gamma import get_active_markets
-from core.collector import save_markets
+from core.collector import save_markets, save_trades
 
 app = FastAPI(title="Edge Scanner v1")
 
@@ -45,6 +45,15 @@ async def startup():
     refresh_markets()
     asyncio.create_task(collector_loop())
 
+@app.get("/api/collect-trades")
+def api_collect_trades():
+    result = save_trades(limit=100)
+
+    return {
+        "status": "ok",
+        "result": result,
+        "db": db_stats(),
+    }
 
 @app.get("/", response_class=HTMLResponse)
 def home():

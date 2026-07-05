@@ -2,7 +2,7 @@ import json
 import time
 
 from core.database import get_connection
-from core.gamma import get_active_markets
+from core.gamma import get_active_markets, get_recent_trades
 
 
 def save_markets(limit: int = 50):
@@ -84,6 +84,97 @@ def save_markets(limit: int = 50):
         )
 
         saved += 1
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "saved": saved,
+        "timestamp": now,
+    }
+
+
+def save_trades(limit: int = 100):
+    trades = get_recent_trades(limit=limit)
+    now = int(time.time())
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    saved = 0
+
+    for trade in trades:
+        trade_id = str(
+            trade.get("id")
+            or trade.get("transactionHash")
+            or trade.get("transaction_hash")
+            or f"{trade.get('proxyWallet')}-{trade.get('conditionId')}-{trade.get('timestamp')}"
+        )
+
+        wallet = trade.get("proxyWallet") or trade.get("maker") or trade.get("wallet")
+        condition_id = trade.get("conditionId") or trade.get("condition_id")
+        market_slug = trade.get("slug") or trade.get("marketSlug")
+        side = trade.get("side")
+        outcome = trade.get("outcome")
+        price = float(trade.get("price") or 0)
+        size = float(trade.get("size") or trade.get("amount") or 0)
+        timestamp = int(trade.get("timestamp") or now)
+
+        if not wallet or not condition_id:
+            continue
+
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO trades (
+                trade_id,
+                wallet_address,
+                condition_id,
+                market_slug,
+                side,
+                outcome,
+                price,
+                size,
+                timestamp,
+                raw_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trade_id,
+                wallet,
+                condition_id,
+                market_slug,
+                side,
+                outcome,
+                price,
+                size,
+                timestamp,
+                json.dumps(trade),
+            ),
+        )
+
+        if cur.rowcount > 0:
+            saved += 1
+
+            cur.execute(
+                """
+                INSERT INTO wallets (
+                    wallet_address,
+                    total_trades,
+                    first_seen,
+                    last_seen
+                )
+                VALUES (?, 1, ?, ?)
+                ON CONFLICT(wallet_address) DO UPDATE SET
+                    total_trades = total_trades + 1,
+                    last_seen = excluded.last_seen
+                """,
+                (
+                    wallet,
+                    timestamp,
+                    timestamp,
+                ),
+            )
 
     conn.commit()
     conn.close()
