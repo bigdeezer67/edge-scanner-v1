@@ -14,6 +14,14 @@ def get_connection():
     return conn
 
 
+def add_column_if_missing(cur, table_name, column_name, column_definition):
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row["name"] for row in cur.fetchall()]
+
+    if column_name not in columns:
+        cur.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
+
+
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
@@ -91,6 +99,14 @@ def init_db():
     )
     """)
 
+    add_column_if_missing(cur, "markets", "resolved", "INTEGER DEFAULT 0")
+    add_column_if_missing(cur, "markets", "winning_outcome", "TEXT")
+    add_column_if_missing(cur, "markets", "resolved_at", "INTEGER")
+
+    add_column_if_missing(cur, "trades", "resolved", "INTEGER DEFAULT 0")
+    add_column_if_missing(cur, "trades", "won", "INTEGER")
+    add_column_if_missing(cur, "trades", "resolved_at", "INTEGER")
+
     conn.commit()
     conn.close()
 
@@ -105,6 +121,12 @@ def db_stats():
     for table in tables:
         cur.execute(f"SELECT COUNT(*) AS count FROM {table}")
         stats[table] = cur.fetchone()["count"]
+
+    cur.execute("SELECT COUNT(*) AS count FROM markets WHERE resolved = 1")
+    stats["resolved_markets"] = cur.fetchone()["count"]
+
+    cur.execute("SELECT COUNT(*) AS count FROM trades WHERE resolved = 1")
+    stats["resolved_trades"] = cur.fetchone()["count"]
 
     conn.close()
     return stats

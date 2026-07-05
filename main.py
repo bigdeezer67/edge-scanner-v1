@@ -8,6 +8,7 @@ from core.database import init_db, db_stats
 from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
 from core.wallets import get_top_wallets, get_wallet_profile
+from core.outcomes import save_resolved_markets, get_resolved_markets
 
 app = FastAPI(title="Nexora")
 
@@ -53,12 +54,26 @@ async def trade_collector_loop():
         await asyncio.sleep(30)
 
 
+async def outcome_collector_loop():
+    await asyncio.sleep(20)
+
+    while True:
+        try:
+            result = save_resolved_markets(limit=100)
+            print(f"outcome collector tick: {result}")
+        except Exception as e:
+            print(f"outcome_collector_loop error: {e}")
+
+        await asyncio.sleep(300)
+
+
 @app.on_event("startup")
 async def startup():
     init_db()
     refresh_markets()
     asyncio.create_task(market_collector_loop())
     asyncio.create_task(trade_collector_loop())
+    asyncio.create_task(outcome_collector_loop())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -101,6 +116,27 @@ def home():
         </tr>
         """
 
+    resolved_rows = ""
+
+    for market in get_resolved_markets(limit=10):
+        slug = market.get("slug") or ""
+        question = market.get("question") or "Unknown Market"
+        winning_outcome = market.get("winning_outcome") or "Unknown"
+
+        if slug:
+            link = f"https://polymarket.com/event/{slug}"
+            question_html = f'<a href="{link}" target="_blank">{question}</a>'
+        else:
+            question_html = question
+
+        resolved_rows += f"""
+        <tr>
+            <td>{question_html}</td>
+            <td>{winning_outcome}</td>
+            <td>{market.get("volume")}</td>
+        </tr>
+        """
+
     error_html = ""
     if CACHE["error"]:
         error_html = f"""
@@ -136,7 +172,7 @@ h1 {{
 
 .grid {{
     display:grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap:14px;
     margin-bottom:30px;
 }}
@@ -217,6 +253,14 @@ a {{
         <div class="value">{stats["trades"]}</div>
     </div>
     <div class="card">
+        <div class="label">Resolved Markets</div>
+        <div class="value">{stats["resolved_markets"]}</div>
+    </div>
+    <div class="card">
+        <div class="label">Resolved Trades</div>
+        <div class="value">{stats["resolved_trades"]}</div>
+    </div>
+    <div class="card">
         <div class="label">Signals</div>
         <div class="value">{stats["signals"]}</div>
     </div>
@@ -236,6 +280,23 @@ a {{
 </thead>
 <tbody>
 {wallet_rows}
+</tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>Resolved Markets</h2>
+
+<table>
+<thead>
+<tr>
+<th>Market</th>
+<th>Winning Outcome</th>
+<th>Volume</th>
+</tr>
+</thead>
+<tbody>
+{resolved_rows}
 </tbody>
 </table>
 </div>
@@ -300,6 +361,25 @@ def api_collect_trades():
     return {
         "status": "ok",
         "result": result,
+        "db": db_stats(),
+    }
+
+
+@app.get("/api/outcomes")
+def api_outcomes():
+    result = save_resolved_markets(limit=100)
+
+    return {
+        "status": "ok",
+        "result": result,
+        "db": db_stats(),
+    }
+
+
+@app.get("/api/resolved-markets")
+def api_resolved_markets():
+    return {
+        "markets": get_resolved_markets(limit=25),
         "db": db_stats(),
     }
 
