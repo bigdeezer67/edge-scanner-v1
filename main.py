@@ -1,15 +1,15 @@
 import asyncio
 import time
 
-from core.wallets import get_top_wallets
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from core.database import init_db, db_stats
 from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
+from core.wallets import get_top_wallets, get_wallet_profile
 
-app = FastAPI(title="Edge Scanner v1")
+app = FastAPI(title="Nexora")
 
 CACHE = {
     "markets": [],
@@ -65,7 +65,7 @@ async def startup():
 def home():
     refresh_markets()
 
-    rows = ""
+    market_rows = ""
 
     for market in CACHE["markets"][:25]:
         question = market.get("question", "Unknown Market")
@@ -79,7 +79,7 @@ def home():
         else:
             question_html = question
 
-        rows += f"""
+        market_rows += f"""
         <tr>
             <td>{question_html}</td>
             <td>{volume}</td>
@@ -87,19 +87,35 @@ def home():
         </tr>
         """
 
+    wallet_rows = ""
+
+    for wallet in get_top_wallets(limit=10):
+        address = wallet["wallet_address"]
+        short_address = f"{address[:6]}...{address[-4:]}"
+        wallet_rows += f"""
+        <tr>
+            <td><a href="/api/wallets/{address}" target="_blank">{short_address}</a></td>
+            <td>{wallet["total_trades"]}</td>
+            <td>{round(wallet["avg_size"], 2)}</td>
+            <td>{wallet["unique_markets"]}</td>
+        </tr>
+        """
+
     error_html = ""
     if CACHE["error"]:
         error_html = f"""
-        <div style="color:#ff6b6b;margin-bottom:20px;">
+        <div class="error">
             {CACHE["error"]}
         </div>
         """
+
+    stats = db_stats()
 
     html = f"""
 <!DOCTYPE html>
 <html>
 <head>
-<title>Edge Scanner v1</title>
+<title>Nexora</title>
 
 <style>
 body {{
@@ -109,13 +125,52 @@ body {{
     padding:30px;
 }}
 
+h1 {{
+    margin-bottom:4px;
+}}
+
+.sub {{
+    color:#9aa8b6;
+    margin-bottom:28px;
+}}
+
+.grid {{
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap:14px;
+    margin-bottom:30px;
+}}
+
+.card {{
+    background:#111827;
+    border:1px solid #263241;
+    border-radius:10px;
+    padding:16px;
+}}
+
+.card .label {{
+    color:#9aa8b6;
+    font-size:13px;
+}}
+
+.card .value {{
+    font-size:24px;
+    font-weight:bold;
+    margin-top:6px;
+}}
+
+.section {{
+    margin-top:34px;
+}}
+
 table {{
     width:100%;
     border-collapse:collapse;
+    background:#111827;
 }}
 
 th,td {{
-    border-bottom:1px solid #333;
+    border-bottom:1px solid #263241;
     padding:12px;
     text-align:left;
 }}
@@ -128,20 +183,67 @@ a {{
     color:#66ccff;
     text-decoration:none;
 }}
+
+.error {{
+    color:#ff6b6b;
+    margin-bottom:20px;
+}}
 </style>
 
 </head>
 
 <body>
 
-<h1>Edge Scanner v1</h1>
-
-<p>Live Polymarket Active Markets</p>
+<h1>Nexora</h1>
+<div class="sub">Predictive market intelligence engine</div>
 
 {error_html}
 
-<table>
+<div class="grid">
+    <div class="card">
+        <div class="label">Markets</div>
+        <div class="value">{stats["markets"]}</div>
+    </div>
+    <div class="card">
+        <div class="label">Snapshots</div>
+        <div class="value">{stats["market_snapshots"]}</div>
+    </div>
+    <div class="card">
+        <div class="label">Wallets</div>
+        <div class="value">{stats["wallets"]}</div>
+    </div>
+    <div class="card">
+        <div class="label">Trades</div>
+        <div class="value">{stats["trades"]}</div>
+    </div>
+    <div class="card">
+        <div class="label">Signals</div>
+        <div class="value">{stats["signals"]}</div>
+    </div>
+</div>
 
+<div class="section">
+<h2>Top Wallets</h2>
+
+<table>
+<thead>
+<tr>
+<th>Wallet</th>
+<th>Total Trades</th>
+<th>Avg Size</th>
+<th>Unique Markets</th>
+</tr>
+</thead>
+<tbody>
+{wallet_rows}
+</tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>Live Polymarket Markets</h2>
+
+<table>
 <thead>
 <tr>
 <th>Market</th>
@@ -149,14 +251,11 @@ a {{
 <th>Liquidity</th>
 </tr>
 </thead>
-
 <tbody>
-
-{rows}
-
+{market_rows}
 </tbody>
-
 </table>
+</div>
 
 </body>
 </html>
@@ -205,19 +304,37 @@ def api_collect_trades():
     }
 
 
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "markets_loaded": len(CACHE["markets"]),
-        "last_updated": CACHE["last_updated"],
-        "error": CACHE["error"],
-        "db": db_stats(),
-    }
-
 @app.get("/api/wallets")
 def api_wallets():
     return {
         "wallets": get_top_wallets(limit=25),
+        "db": db_stats(),
+    }
+
+
+@app.get("/api/wallets/{wallet_address}")
+def api_wallet_profile(wallet_address: str):
+    profile = get_wallet_profile(wallet_address)
+
+    if not profile:
+        return {
+            "status": "not_found",
+            "wallet": wallet_address,
+        }
+
+    return {
+        "status": "ok",
+        "profile": profile,
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "app": "Nexora",
+        "markets_loaded": len(CACHE["markets"]),
+        "last_updated": CACHE["last_updated"],
+        "error": CACHE["error"],
         "db": db_stats(),
     }
