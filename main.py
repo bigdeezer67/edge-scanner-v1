@@ -8,7 +8,7 @@ from core.database import init_db, db_stats
 from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
 from core.wallets import get_top_wallets, get_wallet_profile
-from core.outcomes import save_resolved_markets, get_resolved_markets
+from analysis.outcomes import save_resolved_markets, get_resolved_markets
 
 app = FastAPI(title="Nexora")
 
