@@ -11,6 +11,7 @@ from core.wallets import get_top_wallets, get_wallet_profile
 from analysis.outcomes import save_resolved_markets, get_resolved_markets
 from analysis.wallet_score import update_wallet_scores, score_preview
 from analysis.wallet_stats import update_wallet_stats, wallet_stats_preview
+from analysis.convergence import detect_convergence
 
 app = FastAPI(title="Nexora")
 
@@ -156,6 +157,35 @@ def home():
         </tr>
         """
 
+    convergence = detect_convergence(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=10,
+    )
+
+    signal_rows = ""
+
+    for signal in convergence["signals"]:
+        slug = signal.get("market_slug") or ""
+        market_name = slug if slug else signal["condition_id"]
+
+        if slug:
+            market_html = f'<a href="https://polymarket.com/event/{slug}" target="_blank">{slug}</a>'
+        else:
+            market_html = market_name
+
+        signal_rows += f"""
+        <tr>
+            <td>{market_html}</td>
+            <td>{signal["outcome"]}</td>
+            <td>{signal["wallet_count"]}</td>
+            <td>{signal["avg_wallet_score"]}</td>
+            <td>{signal["total_size"]}</td>
+            <td>{signal["signal_strength"]}</td>
+        </tr>
+        """
+
     error_html = ""
     if CACHE["error"]:
         error_html = f"""
@@ -281,8 +311,28 @@ a {{
     </div>
     <div class="card">
         <div class="label">Signals</div>
-        <div class="value">{stats["signals"]}</div>
+        <div class="value">{convergence["signals_found"]}</div>
     </div>
+</div>
+
+<div class="section">
+<h2>Live Convergence Signals</h2>
+
+<table>
+<thead>
+<tr>
+<th>Market</th>
+<th>Outcome</th>
+<th>Wallets</th>
+<th>Avg Rating</th>
+<th>Total Size</th>
+<th>Signal Strength</th>
+</tr>
+</thead>
+<tbody>
+{signal_rows}
+</tbody>
+</table>
 </div>
 
 <div class="section">
@@ -420,6 +470,16 @@ def api_scores():
         "top_scores": score_preview(limit=25),
         "db": db_stats(),
     }
+
+
+@app.get("/api/convergence")
+def api_convergence():
+    return detect_convergence(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=25,
+    )
 
 
 @app.get("/api/resolved-markets")
