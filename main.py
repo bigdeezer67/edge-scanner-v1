@@ -26,7 +26,7 @@ def refresh_markets():
         CACHE["error"] = str(e)
 
 
-async def collector_loop():
+async def market_collector_loop():
     await asyncio.sleep(5)
 
     while True:
@@ -34,26 +34,31 @@ async def collector_loop():
             result = save_markets(limit=50)
             print(f"market collector tick: {result}")
         except Exception as e:
-            print(f"collector_loop error: {e}")
+            print(f"market_collector_loop error: {e}")
 
         await asyncio.sleep(60)
+
+
+async def trade_collector_loop():
+    await asyncio.sleep(10)
+
+    while True:
+        try:
+            result = save_trades(limit=100)
+            print(f"trade collector tick: {result}")
+        except Exception as e:
+            print(f"trade_collector_loop error: {e}")
+
+        await asyncio.sleep(30)
 
 
 @app.on_event("startup")
 async def startup():
     init_db()
     refresh_markets()
-    asyncio.create_task(collector_loop())
+    asyncio.create_task(market_collector_loop())
+    asyncio.create_task(trade_collector_loop())
 
-@app.get("/api/collect-trades")
-def api_collect_trades():
-    result = save_trades(limit=100)
-
-    return {
-        "status": "ok",
-        "result": result,
-        "db": db_stats(),
-    }
 
 @app.get("/", response_class=HTMLResponse)
 def home():
@@ -180,6 +185,17 @@ def api_db():
 @app.get("/api/collect")
 def api_collect():
     result = save_markets(limit=50)
+
+    return {
+        "status": "ok",
+        "result": result,
+        "db": db_stats(),
+    }
+
+
+@app.get("/api/collect-trades")
+def api_collect_trades():
+    result = save_trades(limit=100)
 
     return {
         "status": "ok",
