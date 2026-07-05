@@ -1,15 +1,14 @@
+import asyncio
 import time
-import requests
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from core.database import init_db, db_stats
+from core.gamma import get_active_markets
 from core.collector import save_markets
 
 app = FastAPI(title="Edge Scanner v1")
-
-GAMMA_BASE = "https://gamma-api.polymarket.com"
 
 CACHE = {
     "markets": [],
@@ -18,35 +17,33 @@ CACHE = {
 }
 
 
-def fetch_active_markets(limit: int = 25):
-    url = f"{GAMMA_BASE}/markets"
-
-    params = {
-        "active": "true",
-        "closed": "false",
-        "limit": limit,
-        "order": "volume",
-        "ascending": "false",
-    }
-
-    response = requests.get(url, params=params, timeout=15)
-    response.raise_for_status()
-    return response.json()
-
-
 def refresh_markets():
     try:
-        CACHE["markets"] = fetch_active_markets()
+        CACHE["markets"] = get_active_markets(limit=25)
         CACHE["last_updated"] = int(time.time())
         CACHE["error"] = None
     except Exception as e:
         CACHE["error"] = str(e)
 
 
+async def collector_loop():
+    await asyncio.sleep(5)
+
+    while True:
+        try:
+            result = save_markets(limit=50)
+            print(f"market collector tick: {result}")
+        except Exception as e:
+            print(f"collector_loop error: {e}")
+
+        await asyncio.sleep(60)
+
+
 @app.on_event("startup")
-def startup():
+async def startup():
     init_db()
     refresh_markets()
+    asyncio.create_task(collector_loop())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -166,6 +163,22 @@ def api_markets():
     )
 
 
+@app.get("/api/db")
+def api_db():
+    return db_stats()
+
+
+@app.get("/api/collect")
+def api_collect():
+    result = save_markets(limit=50)
+
+    return {
+        "status": "ok",
+        "result": result,
+        "db": db_stats(),
+    }
+
+
 @app.get("/health")
 def health():
     return {
@@ -173,17 +186,5 @@ def health():
         "markets_loaded": len(CACHE["markets"]),
         "last_updated": CACHE["last_updated"],
         "error": CACHE["error"],
-    }
-
-@app.get("/api/db")
-def api_db():
-    return db_stats()
-
-@app.get("/api/collect")
-def api_collect():
-    result = save_markets(limit=50)
-    return {
-        "status": "ok",
-        "result": result,
         "db": db_stats(),
     }
