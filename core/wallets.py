@@ -23,7 +23,7 @@ def get_top_wallets(limit: int = 25):
         LEFT JOIN trades t
             ON w.wallet_address = t.wallet_address
         GROUP BY w.wallet_address
-        ORDER BY w.total_trades DESC
+        ORDER BY w.score DESC, w.total_trades DESC
         LIMIT ?
         """,
         (limit,),
@@ -43,11 +43,13 @@ def get_wallet_profile(wallet_address: str):
         SELECT
             w.wallet_address,
             w.total_trades,
-            w.first_seen,
-            w.last_seen,
+            w.wins,
+            w.losses,
             w.win_rate,
             w.roi,
             w.score,
+            w.first_seen,
+            w.last_seen,
             COALESCE(AVG(t.price), 0) AS avg_price,
             COALESCE(AVG(t.size), 0) AS avg_size,
             COALESCE(SUM(t.size), 0) AS total_size,
@@ -77,7 +79,9 @@ def get_wallet_profile(wallet_address: str):
             outcome,
             price,
             size,
-            timestamp
+            timestamp,
+            resolved,
+            won
         FROM trades
         WHERE wallet_address = ?
         ORDER BY timestamp DESC

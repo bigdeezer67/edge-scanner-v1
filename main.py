@@ -9,6 +9,7 @@ from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
 from core.wallets import get_top_wallets, get_wallet_profile
 from analysis.outcomes import save_resolved_markets, get_resolved_markets
+from analysis.wallet_score import update_wallet_scores, score_preview
 
 app = FastAPI(title="Nexora")
 
@@ -67,6 +68,19 @@ async def outcome_collector_loop():
         await asyncio.sleep(300)
 
 
+async def wallet_score_loop():
+    await asyncio.sleep(30)
+
+    while True:
+        try:
+            result = update_wallet_scores()
+            print(f"wallet score tick: {result}")
+        except Exception as e:
+            print(f"wallet_score_loop error: {e}")
+
+        await asyncio.sleep(120)
+
+
 @app.on_event("startup")
 async def startup():
     init_db()
@@ -74,6 +88,7 @@ async def startup():
     asyncio.create_task(market_collector_loop())
     asyncio.create_task(trade_collector_loop())
     asyncio.create_task(outcome_collector_loop())
+    asyncio.create_task(wallet_score_loop())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -113,6 +128,7 @@ def home():
             <td>{wallet["total_trades"]}</td>
             <td>{round(wallet["avg_size"], 2)}</td>
             <td>{wallet["unique_markets"]}</td>
+            <td>{round(wallet["score"], 2)}</td>
         </tr>
         """
 
@@ -276,6 +292,7 @@ a {{
 <th>Total Trades</th>
 <th>Avg Size</th>
 <th>Unique Markets</th>
+<th>Nexora Score</th>
 </tr>
 </thead>
 <tbody>
@@ -372,6 +389,18 @@ def api_outcomes():
     return {
         "status": "ok",
         "result": result,
+        "db": db_stats(),
+    }
+
+
+@app.get("/api/scores")
+def api_scores():
+    result = update_wallet_scores()
+
+    return {
+        "status": "ok",
+        "result": result,
+        "top_scores": score_preview(limit=25),
         "db": db_stats(),
     }
 
