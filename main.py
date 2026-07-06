@@ -17,6 +17,9 @@ from analysis.market_pressure import calculate_market_pressure
 from analysis.opposition import detect_opposition
 from analysis.conviction import calculate_conviction
 from analysis.signal_explainer import explain_signals
+from engines.early_entry import calculate_early_entry_scores
+from engines.smart_money_index import calculate_smart_money_index
+from engines.market_timeline import get_market_timeline
 
 app = FastAPI(title="Nexora")
 
@@ -477,6 +480,20 @@ def api_wallet_stats():
         "db": db_stats(),
     }
 
+@app.get("/api/early-entry")
+def api_early_entry():
+    return calculate_early_entry_scores(limit=50)
+
+
+@app.get("/api/smart-money")
+def api_smart_money():
+    return calculate_smart_money_index(limit=50)
+
+
+@app.get("/api/market-timeline/{condition_id}")
+def api_market_timeline(condition_id: str):
+    return get_market_timeline(condition_id=condition_id, limit=100)
+
 
 @app.get("/api/scores")
 def api_scores():
@@ -569,6 +586,19 @@ def api_wallet_profile(wallet_address: str):
         "profile": profile,
     }
 
+@app.get("/api/early-entry")
+def api_early_entry():
+    return calculate_early_entry_scores(limit=50)
+
+
+@app.get("/api/smart-money")
+def api_smart_money():
+    return calculate_smart_money_index(limit=50)
+
+
+@app.get("/api/market-timeline/{condition_id}")
+def api_market_timeline(condition_id: str):
+    return get_market_timeline(condition_id=condition_id, limit=100)
 
 @app.get("/health")
 def health():
