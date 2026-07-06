@@ -8,10 +8,15 @@ from core.database import init_db, db_stats
 from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
 from core.wallets import get_top_wallets, get_wallet_profile
+
 from analysis.outcomes import save_resolved_markets, get_resolved_markets
 from analysis.wallet_score import update_wallet_scores, score_preview
 from analysis.wallet_stats import update_wallet_stats, wallet_stats_preview
 from analysis.convergence import detect_convergence
+from analysis.market_pressure import calculate_market_pressure
+from analysis.opposition import detect_opposition
+from analysis.conviction import calculate_conviction
+from analysis.signal_explainer import explain_signals
 
 app = FastAPI(title="Nexora")
 
@@ -164,9 +169,16 @@ def home():
         limit=10,
     )
 
+    conviction = calculate_conviction(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=10,
+    )
+
     signal_rows = ""
 
-    for signal in convergence["signals"]:
+    for signal in conviction["signals"]:
         slug = signal.get("market_slug") or ""
         market_name = slug if slug else signal["condition_id"]
 
@@ -182,7 +194,10 @@ def home():
             <td>{signal["wallet_count"]}</td>
             <td>{signal["avg_wallet_score"]}</td>
             <td>{signal["total_size"]}</td>
-            <td>{signal["signal_strength"]}</td>
+            <td>{signal["convergence_score"]}</td>
+            <td>{signal["pressure_score"]}</td>
+            <td>{signal["conviction_score"]}</td>
+            <td>{signal["conviction_level"]}</td>
         </tr>
         """
 
@@ -311,12 +326,12 @@ a {{
     </div>
     <div class="card">
         <div class="label">Signals</div>
-        <div class="value">{convergence["signals_found"]}</div>
+        <div class="value">{conviction["signals_found"]}</div>
     </div>
 </div>
 
 <div class="section">
-<h2>Live Convergence Signals</h2>
+<h2>Market Intelligence Signals</h2>
 
 <table>
 <thead>
@@ -326,7 +341,10 @@ a {{
 <th>Wallets</th>
 <th>Avg Rating</th>
 <th>Total Size</th>
-<th>Signal Strength</th>
+<th>Convergence</th>
+<th>Pressure</th>
+<th>Conviction</th>
+<th>Level</th>
 </tr>
 </thead>
 <tbody>
@@ -475,6 +493,44 @@ def api_scores():
 @app.get("/api/convergence")
 def api_convergence():
     return detect_convergence(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=25,
+    )
+
+
+@app.get("/api/market-pressure")
+def api_market_pressure():
+    return calculate_market_pressure(
+        window_seconds=900,
+        min_total_size=0,
+        limit=25,
+    )
+
+
+@app.get("/api/opposition")
+def api_opposition():
+    return detect_opposition(
+        window_seconds=900,
+        min_wallet_score=10,
+        limit=25,
+    )
+
+
+@app.get("/api/conviction")
+def api_conviction():
+    return calculate_conviction(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=25,
+    )
+
+
+@app.get("/api/signals/explained")
+def api_explained_signals():
+    return explain_signals(
         window_seconds=900,
         min_wallets=2,
         min_avg_score=10,
