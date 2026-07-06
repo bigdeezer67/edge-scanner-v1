@@ -1,42 +1,28 @@
 import asyncio
-import time
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 
 from core.database import init_db, db_stats
-from core.gamma import get_active_markets
 from core.collector import save_markets, save_trades
-from core.wallets import get_top_wallets, get_wallet_profile
-
+from core.wallets import get_top_wallets
 from analysis.outcomes import save_resolved_markets, get_resolved_markets
-from analysis.wallet_score import update_wallet_scores, score_preview
-from analysis.wallet_stats import update_wallet_stats, wallet_stats_preview
-from analysis.convergence import detect_convergence
-from analysis.market_pressure import calculate_market_pressure
-from analysis.opposition import detect_opposition
+from analysis.wallet_score import update_wallet_scores
+from analysis.wallet_stats import update_wallet_stats
 from analysis.conviction import calculate_conviction
-from analysis.signal_explainer import explain_signals
-from engines.early_entry import calculate_early_entry_scores
-from engines.smart_money_index import calculate_smart_money_index
-from engines.market_timeline import get_market_timeline
+
+from app.services.market_cache import CACHE, refresh_markets
+from app.routers.markets import router as markets_router
+from app.routers.wallets import router as wallets_router
+from app.routers.intelligence import router as intelligence_router
+from app.routers.system import router as system_router
 
 app = FastAPI(title="Nexora")
 
-CACHE = {
-    "markets": [],
-    "last_updated": None,
-    "error": None,
-}
-
-
-def refresh_markets():
-    try:
-        CACHE["markets"] = get_active_markets(limit=25)
-        CACHE["last_updated"] = int(time.time())
-        CACHE["error"] = None
-    except Exception as e:
-        CACHE["error"] = str(e)
+app.include_router(markets_router)
+app.include_router(wallets_router)
+app.include_router(intelligence_router)
+app.include_router(system_router)
 
 
 async def market_collector_loop():
@@ -164,13 +150,6 @@ def home():
             <td>{market.get("volume")}</td>
         </tr>
         """
-
-    convergence = detect_convergence(
-        window_seconds=900,
-        min_wallets=2,
-        min_avg_score=10,
-        limit=10,
-    )
 
     conviction = calculate_conviction(
         window_seconds=900,
@@ -415,190 +394,6 @@ a {{
 
     return HTMLResponse(html)
 
-
-@app.get("/api/markets")
-def api_markets():
-    refresh_markets()
-
-    return JSONResponse(
-        {
-            "markets": CACHE["markets"],
-            "last_updated": CACHE["last_updated"],
-            "error": CACHE["error"],
-        }
-    )
-
-
-@app.get("/api/db")
-def api_db():
-    return db_stats()
-
-
-@app.get("/api/collect")
-def api_collect():
-    result = save_markets(limit=50)
-
-    return {
-        "status": "ok",
-        "result": result,
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/collect-trades")
-def api_collect_trades():
-    result = save_trades(limit=100)
-
-    return {
-        "status": "ok",
-        "result": result,
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/outcomes")
-def api_outcomes():
-    result = save_resolved_markets(limit=100)
-
-    return {
-        "status": "ok",
-        "result": result,
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/wallet-stats")
-def api_wallet_stats():
-    stats_result = update_wallet_stats()
-    score_result = update_wallet_scores()
-
-    return {
-        "status": "ok",
-        "stats_result": stats_result,
-        "score_result": score_result,
-        "wallet_stats": wallet_stats_preview(limit=25),
-        "db": db_stats(),
-    }
-
-@app.get("/api/early-entry")
-def api_early_entry():
-    return calculate_early_entry_scores(limit=50)
-
-
-@app.get("/api/smart-money")
-def api_smart_money():
-    return calculate_smart_money_index(limit=50)
-
-
-@app.get("/api/market-timeline/{condition_id}")
-def api_market_timeline(condition_id: str):
-    return get_market_timeline(condition_id=condition_id, limit=100)
-
-
-@app.get("/api/scores")
-def api_scores():
-    result = update_wallet_scores()
-
-    return {
-        "status": "ok",
-        "result": result,
-        "top_scores": score_preview(limit=25),
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/convergence")
-def api_convergence():
-    return detect_convergence(
-        window_seconds=900,
-        min_wallets=2,
-        min_avg_score=10,
-        limit=25,
-    )
-
-
-@app.get("/api/market-pressure")
-def api_market_pressure():
-    return calculate_market_pressure(
-        window_seconds=900,
-        min_total_size=0,
-        limit=25,
-    )
-
-
-@app.get("/api/opposition")
-def api_opposition():
-    return detect_opposition(
-        window_seconds=900,
-        min_wallet_score=10,
-        limit=25,
-    )
-
-
-@app.get("/api/conviction")
-def api_conviction():
-    return calculate_conviction(
-        window_seconds=900,
-        min_wallets=2,
-        min_avg_score=10,
-        limit=25,
-    )
-
-
-@app.get("/api/signals/explained")
-def api_explained_signals():
-    return explain_signals(
-        window_seconds=900,
-        min_wallets=2,
-        min_avg_score=10,
-        limit=25,
-    )
-
-
-@app.get("/api/resolved-markets")
-def api_resolved_markets():
-    return {
-        "markets": get_resolved_markets(limit=25),
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/wallets")
-def api_wallets():
-    return {
-        "wallets": get_top_wallets(limit=25),
-        "db": db_stats(),
-    }
-
-
-@app.get("/api/wallets/{wallet_address}")
-def api_wallet_profile(wallet_address: str):
-    profile = get_wallet_profile(wallet_address)
-
-    if not profile:
-        return {
-            "status": "not_found",
-            "wallet": wallet_address,
-        }
-
-    return {
-        "status": "ok",
-        "profile": profile,
-    }
-
-@app.get("/api/early-entry")
-def api_early_entry():
-    return calculate_early_entry_scores(limit=50)
-
-
-@app.get("/api/smart-money")
-def api_smart_money():
-    return calculate_smart_money_index(limit=50)
-
-
-@app.get("/api/market-timeline/{condition_id}")
-def api_market_timeline(condition_id: str):
-    return get_market_timeline(condition_id=condition_id, limit=100)
 
 @app.get("/health")
 def health():
