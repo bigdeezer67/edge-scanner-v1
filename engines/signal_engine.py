@@ -344,3 +344,87 @@ def get_signal_history(signal_uuid: str):
         "events": events,
         "timestamp": int(time.time()),
     }
+
+def get_signal_by_uuid(signal_uuid: str):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM signals
+        WHERE signal_uuid = ?
+        """,
+        (signal_uuid,),
+    )
+
+    signal = cur.fetchone()
+    conn.close()
+
+    if not signal:
+        return {
+            "status": "not_found",
+            "signal_uuid": signal_uuid,
+        }
+
+    return {
+        "status": "ok",
+        "signal": dict(signal),
+        "timestamp": int(time.time()),
+    }
+
+
+def get_top_signals(limit: int = 25):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM signals
+        ORDER BY confidence DESC, updated_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+    signals = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    return {
+        "status": "ok",
+        "signals_found": len(signals),
+        "signals": signals,
+        "timestamp": int(time.time()),
+    }
+
+
+def get_trending_signals(limit: int = 25):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            s.*,
+            COUNT(e.id) AS recent_events
+        FROM signals s
+        LEFT JOIN signal_events e
+            ON s.signal_uuid = e.signal_uuid
+            AND e.created_at >= ?
+        GROUP BY s.signal_uuid
+        ORDER BY recent_events DESC, s.confidence DESC, s.updated_at DESC
+        LIMIT ?
+        """,
+        (int(time.time()) - 3600, limit),
+    )
+
+    signals = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    return {
+        "status": "ok",
+        "signals_found": len(signals),
+        "signals": signals,
+        "timestamp": int(time.time()),
+    }

@@ -13,6 +13,9 @@ from engines.signal_engine import (
     run_signal_engine,
     get_live_signals,
     get_signal_history,
+    get_signal_by_uuid,
+    get_top_signals,
+    get_trending_signals,
 )
 
 router = APIRouter()
@@ -90,7 +93,6 @@ def api_run_signal_engine():
         limit=25,
     )
 
-
 @router.get("/api/signals/live")
 def api_live_signals():
     return get_live_signals(limit=50)
@@ -99,3 +101,18 @@ def api_live_signals():
 @router.get("/api/signals/{signal_uuid}/history")
 def api_signal_history(signal_uuid: str):
     return get_signal_history(signal_uuid=signal_uuid)
+
+@router.get("/api/signals/top")
+def api_top_signals():
+    return get_top_signals(limit=25)
+
+
+@router.get("/api/signals/trending")
+def api_trending_signals():
+    return get_trending_signals(limit=25)
+
+
+@router.get("/api/signals/{signal_uuid}")
+def api_signal_by_uuid(signal_uuid: str):
+    return get_signal_by_uuid(signal_uuid=signal_uuid)
+    
