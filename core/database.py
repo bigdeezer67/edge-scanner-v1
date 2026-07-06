@@ -86,16 +86,39 @@ def init_db():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS signals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_uuid TEXT UNIQUE,
         condition_id TEXT,
         market_slug TEXT,
+        outcome TEXT,
         side TEXT,
-        wallet_count INTEGER,
-        combined_score REAL,
-        avg_entry REAL,
-        signal_strength REAL,
-        status TEXT DEFAULT 'PAPER',
+        status TEXT DEFAULT 'NEW',
+        confidence REAL DEFAULT 0,
+        conviction_score REAL DEFAULT 0,
+        pressure_score REAL DEFAULT 0,
+        convergence_score REAL DEFAULT 0,
+        opposition_penalty REAL DEFAULT 0,
+        wallet_count INTEGER DEFAULT 0,
+        avg_wallet_score REAL DEFAULT 0,
+        total_size REAL DEFAULT 0,
+        avg_entry REAL DEFAULT 0,
         created_at INTEGER,
+        updated_at INTEGER,
+        resolved_at INTEGER,
         raw_json TEXT
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS signal_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_uuid TEXT,
+        event_type TEXT,
+        old_status TEXT,
+        new_status TEXT,
+        old_confidence REAL,
+        new_confidence REAL,
+        details_json TEXT,
+        created_at INTEGER
     )
     """)
 
@@ -106,6 +129,32 @@ def init_db():
     add_column_if_missing(cur, "trades", "resolved", "INTEGER DEFAULT 0")
     add_column_if_missing(cur, "trades", "won", "INTEGER")
     add_column_if_missing(cur, "trades", "resolved_at", "INTEGER")
+    add_column_if_missing(cur, "signals", "signal_uuid", "TEXT")
+    add_column_if_missing(cur, "signals", "outcome", "TEXT")
+    add_column_if_missing(cur, "signals", "confidence", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "conviction_score", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "pressure_score", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "convergence_score", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "opposition_penalty", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "avg_wallet_score", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "total_size", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "resolved_at", "INTEGER")
+    add_column_if_missing(cur, "signals", "resolved_at", "INTEGER")
+    add_column_if_missing(cur, "signals", "side", "TEXT")
+    add_column_if_missing(cur, "signals", "status", "TEXT DEFAULT 'NEW'")
+    add_column_if_missing(cur, "signals", "wallet_count", "INTEGER DEFAULT 0")
+    add_column_if_missing(cur, "signals", "avg_entry", "REAL DEFAULT 0")
+    add_column_if_missing(cur, "signals", "created_at", "INTEGER")
+    add_column_if_missing(cur, "signals", "updated_at", "INTEGER")
+    add_column_if_missing(cur, "signals", "raw_json", "TEXT")
+
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_condition ON trades(condition_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_wallet ON trades(wallet_address)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_signals_uuid ON signals(signal_uuid)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_signals_condition ON signals(condition_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_signal_events_uuid ON signal_events(signal_uuid)")
 
     conn.commit()
     conn.close()
@@ -115,7 +164,15 @@ def db_stats():
     conn = get_connection()
     cur = conn.cursor()
 
-    tables = ["markets", "market_snapshots", "wallets", "trades", "signals"]
+    tables = [
+        "markets",
+        "market_snapshots",
+        "wallets",
+        "trades",
+        "signals",
+        "signal_events",
+    ]
+
     stats = {}
 
     for table in tables:

@@ -9,6 +9,11 @@ from analysis.signal_explainer import explain_signals
 from engines.early_entry import calculate_early_entry_scores
 from engines.smart_money_index import calculate_smart_money_index
 from engines.market_timeline import get_market_timeline
+from engines.signal_engine import (
+    run_signal_engine,
+    get_live_signals,
+    get_signal_history,
+)
 
 router = APIRouter()
 
@@ -74,3 +79,23 @@ def api_smart_money():
 @router.get("/api/market-timeline/{condition_id}")
 def api_market_timeline(condition_id: str):
     return get_market_timeline(condition_id=condition_id, limit=100)
+
+
+@router.get("/api/signals/run")
+def api_run_signal_engine():
+    return run_signal_engine(
+        window_seconds=900,
+        min_wallets=2,
+        min_avg_score=10,
+        limit=25,
+    )
+
+
+@router.get("/api/signals/live")
+def api_live_signals():
+    return get_live_signals(limit=50)
+
+
+@router.get("/api/signals/{signal_uuid}/history")
+def api_signal_history(signal_uuid: str):
+    return get_signal_history(signal_uuid=signal_uuid)
