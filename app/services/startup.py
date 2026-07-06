@@ -7,5 +7,6 @@ from app.services.signal_scheduler import start_signal_scheduler
 async def startup_event():
     init_db()
     refresh_markets()
+
     start_background_tasks()
     start_signal_scheduler()

@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from core.database import get_connection
+
 from analysis.convergence import detect_convergence
 from analysis.market_pressure import calculate_market_pressure
 from analysis.opposition import detect_opposition
@@ -20,6 +22,10 @@ from engines.signal_engine import (
 
 router = APIRouter()
 
+
+# -----------------------
+# Intelligence Engines
+# -----------------------
 
 @router.get("/api/convergence")
 def api_convergence():
@@ -69,6 +75,10 @@ def api_explained_signals():
     )
 
 
+# -----------------------
+# Wallet Intelligence
+# -----------------------
+
 @router.get("/api/early-entry")
 def api_early_entry():
     return calculate_early_entry_scores(limit=50)
@@ -81,8 +91,15 @@ def api_smart_money():
 
 @router.get("/api/market-timeline/{condition_id}")
 def api_market_timeline(condition_id: str):
-    return get_market_timeline(condition_id=condition_id, limit=100)
+    return get_market_timeline(
+        condition_id=condition_id,
+        limit=100,
+    )
 
+
+# -----------------------
+# Signal Engine
+# -----------------------
 
 @router.get("/api/signals/run")
 def api_run_signal_engine():
@@ -93,14 +110,16 @@ def api_run_signal_engine():
         limit=25,
     )
 
+
 @router.get("/api/signals/live")
 def api_live_signals():
     return get_live_signals(limit=50)
 
 
-@router.get("/api/signals/{signal_uuid}/history")
-def api_signal_history(signal_uuid: str):
-    return get_signal_history(signal_uuid=signal_uuid)
+@router.get("/api/signals/active")
+def api_active_signals():
+    return get_live_signals(limit=50)
+
 
 @router.get("/api/signals/top")
 def api_top_signals():
@@ -112,7 +131,59 @@ def api_trending_signals():
     return get_trending_signals(limit=25)
 
 
+@router.get("/api/signals/expired")
+def api_expired():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM signals
+        WHERE status='EXPIRED'
+        ORDER BY updated_at DESC
+        LIMIT 100
+        """
+    )
+
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    return {
+        "count": len(rows),
+        "signals": rows,
+    }
+
+
+@router.get("/api/signals/resolved")
+def api_resolved():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM signals
+        WHERE status='RESOLVED'
+        ORDER BY resolved_at DESC
+        LIMIT 100
+        """
+    )
+
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    return {
+        "count": len(rows),
+        "signals": rows,
+    }
+
+
 @router.get("/api/signals/{signal_uuid}")
 def api_signal_by_uuid(signal_uuid: str):
     return get_signal_by_uuid(signal_uuid=signal_uuid)
-    
+
+
+@router.get("/api/signals/{signal_uuid}/history")
+def api_signal_history(signal_uuid: str):
+    return get_signal_history(signal_uuid=signal_uuid)

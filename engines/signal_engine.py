@@ -428,3 +428,135 @@ def get_trending_signals(limit: int = 25):
         "signals": signals,
         "timestamp": int(time.time()),
     }
+
+    ACTIVE_STATUSES = (
+    "NEW",
+    "BUILDING",
+    "CONFIRMED",
+    "STRONG",
+    "WEAKENING",
+)
+
+
+def expire_old_signals(expire_after_seconds=1800):
+    now = int(time.time())
+    cutoff = now - expire_after_seconds
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT signal_uuid,status,confidence
+        FROM signals
+        WHERE status IN ('NEW','BUILDING','CONFIRMED','STRONG','WEAKENING')
+        AND updated_at < ?
+        """,
+        (cutoff,),
+    )
+
+    rows = cur.fetchall()
+
+    expired = 0
+
+    for row in rows:
+
+        cur.execute(
+            """
+            UPDATE signals
+            SET
+                status='EXPIRED',
+                updated_at=?
+            WHERE signal_uuid=?
+            """,
+            (
+                now,
+                row["signal_uuid"],
+            ),
+        )
+
+        insert_signal_event(
+            cur=cur,
+            signal_uuid=row["signal_uuid"],
+            event_type="EXPIRED",
+            old_status=row["status"],
+            new_status="EXPIRED",
+            old_confidence=row["confidence"],
+            new_confidence=row["confidence"],
+            details={},
+            created_at=now,
+        )
+
+        expired += 1
+
+    conn.commit()
+    conn.close()
+
+    return expired
+
+def resolve_finished_markets():
+    now = int(time.time())
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            s.signal_uuid,
+            s.status,
+            s.confidence,
+            m.winning_outcome,
+            s.outcome
+        FROM signals s
+        JOIN markets m
+            ON s.condition_id=m.condition_id
+        WHERE
+            m.resolved=1
+        AND
+            s.status!='RESOLVED'
+        """
+    )
+
+    rows = cur.fetchall()
+
+    resolved = 0
+
+    for row in rows:
+
+        cur.execute(
+            """
+            UPDATE signals
+            SET
+                status='RESOLVED',
+                resolved_at=?,
+                updated_at=?
+            WHERE signal_uuid=?
+            """,
+            (
+                now,
+                now,
+                row["signal_uuid"],
+            ),
+        )
+
+        insert_signal_event(
+            cur=cur,
+            signal_uuid=row["signal_uuid"],
+            event_type="RESOLVED",
+            old_status=row["status"],
+            new_status="RESOLVED",
+            old_confidence=row["confidence"],
+            new_confidence=row["confidence"],
+            details={
+                "correct": row["winning_outcome"] == row["outcome"]
+            },
+            created_at=now,
+        )
+
+        resolved += 1
+
+    conn.commit()
+    conn.close()
+
+    return resolved

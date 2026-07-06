@@ -1,8 +1,11 @@
 import asyncio
 import time
 
-from engines.signal_engine import run_signal_engine
-
+from engines.signal_engine import (
+    run_signal_engine,
+    expire_old_signals,
+    resolve_finished_markets,
+)
 
 SIGNAL_ENGINE_STATUS = {
     "enabled": True,
@@ -12,6 +15,8 @@ SIGNAL_ENGINE_STATUS = {
     "processed": 0,
     "created": 0,
     "updated": 0,
+    "expired": 0,
+    "resolved": 0,
     "errors": 0,
     "last_error": None,
 }
@@ -33,15 +38,39 @@ async def signal_engine_loop():
             )
 
             processed_signals = result.get("signals", [])
-            created = sum(1 for signal in processed_signals if signal.get("action") == "created")
-            updated = sum(1 for signal in processed_signals if signal.get("action") == "updated")
 
-            SIGNAL_ENGINE_STATUS["processed"] = result.get("processed_signals", 0)
+            created = sum(
+                1 for signal in processed_signals
+                if signal.get("action") == "created"
+            )
+
+            updated = sum(
+                1 for signal in processed_signals
+                if signal.get("action") == "updated"
+            )
+
+            expired = expire_old_signals()
+            resolved = resolve_finished_markets()
+
+            SIGNAL_ENGINE_STATUS["processed"] = result.get(
+                "processed_signals",
+                0,
+            )
+
             SIGNAL_ENGINE_STATUS["created"] = created
             SIGNAL_ENGINE_STATUS["updated"] = updated
+            SIGNAL_ENGINE_STATUS["expired"] = expired
+            SIGNAL_ENGINE_STATUS["resolved"] = resolved
             SIGNAL_ENGINE_STATUS["last_error"] = None
 
-            print(f"signal engine tick: {result}")
+            print(
+                f"signal engine tick: "
+                f"processed={SIGNAL_ENGINE_STATUS['processed']} "
+                f"created={created} "
+                f"updated={updated} "
+                f"expired={expired} "
+                f"resolved={resolved}"
+            )
 
         except Exception as e:
             SIGNAL_ENGINE_STATUS["errors"] += 1
@@ -51,14 +80,18 @@ async def signal_engine_loop():
         finally:
             SIGNAL_ENGINE_STATUS["running"] = False
             SIGNAL_ENGINE_STATUS["last_run"] = int(time.time())
-            SIGNAL_ENGINE_STATUS["last_duration_ms"] = int((time.time() - start) * 1000)
+            SIGNAL_ENGINE_STATUS["last_duration_ms"] = int(
+                (time.time() - start) * 1000
+            )
 
         await asyncio.sleep(60)
-
 
 def start_signal_scheduler():
     asyncio.create_task(signal_engine_loop())
 
-
 def get_signal_engine_status():
     return SIGNAL_ENGINE_STATUS
+
+def start_signal_scheduler():
+    print("Starting Signal Scheduler...")
+    asyncio.create_task(signal_engine_loop())
