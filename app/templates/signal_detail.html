@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<header class="topbar">
+    <div>
+        <h1>SIGNAL DETAIL</h1>
+        <p>{{ signal.market_slug }}</p>
+    </div>
+
+    <a class="view-link" href="/">← Back</a>
+</header>
+
+<div class="dashboard-grid">
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>{{ signal.outcome }}</h2>
+                <span class="status-pill">{{ signal.status }}</span>
+            </div>
+
+            <div class="signal-grid">
+                <div class="signal-metric">
+                    <label>Confidence</label>
+                    <strong>{{ signal.confidence }}%</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Pressure</label>
+                    <strong>{{ signal.pressure_score }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Conviction</label>
+                    <strong>{{ signal.conviction_score }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Wallets</label>
+                    <strong>{{ signal.wallet_count }}</strong>
+                </div>
+            </div>
+
+            <div class="progress-header">
+                <span>Confidence Strength</span>
+                <span>{{ signal.confidence }}%</span>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ signal.confidence }}%;"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Why Nexora Flagged This</h2>
+            </div>
+
+            <p class="ai-explanation">
+                Nexora detected coordinated activity on this market from tracked wallets.
+                The signal is currently rated <strong>{{ signal.status }}</strong> with
+                <strong>{{ signal.confidence }}%</strong> confidence. Pressure score is
+                <strong>{{ signal.pressure_score }}</strong>, conviction score is
+                <strong>{{ signal.conviction_score }}</strong>, and
+                <strong>{{ signal.wallet_count }}</strong> wallets contributed to this signal.
+            </p>
+        </div>
+
+    </div>
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Market Intelligence</h2>
+            </div>
+
+            <div class="system-item">
+                <div>Market</div>
+                <strong>{{ signal.market_slug }}</strong>
+            </div>
+
+            <div class="system-item">
+                <div>Outcome</div>
+                <strong>{{ signal.outcome }}</strong>
+            </div>
+
+            <div class="system-item">
+                <div>Side</div>
+                <strong>{{ signal.side }}</strong>
+            </div>
+
+            <div class="system-item">
+                <div>Avg Entry</div>
+                <strong>{{ signal.avg_entry }}</strong>
+            </div>
+
+            <div class="system-item">
+                <div>Total Size</div>
+                <strong>{{ signal.total_size }}</strong>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Signal Timeline</h2>
+            </div>
+
+            {% for event in events %}
+
+            <div class="timeline-event">
+                <div>
+                    <strong>{{ event.event_type }}</strong><br>
+                    <small>{{ event.old_status }} → {{ event.new_status }}</small>
+                </div>
+
+                <div>
+                    {{ event.old_confidence }} → {{ event.new_confidence }}
+                </div>
+            </div>
+
+            {% endfor %}
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

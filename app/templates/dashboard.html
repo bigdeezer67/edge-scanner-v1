@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<header class="topbar">
+
+    <div>
+        <h1>NEXORA</h1>
+        <p>Prediction Market Intelligence Platform</p>
+    </div>
+
+    <div class="status">
+
+        <div class="status-dot"></div>
+
+        <div>
+
+            <strong>LIVE</strong><br>
+
+            <small>
+                Scheduler Running
+            </small>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+{% include "components/metric_cards.html" %}
+
+
+<div class="dashboard-grid">
+
+    <div>
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>Live Signals</h2>
+
+                <span>{{ signal_count }} Active</span>
+
+            </div>
+
+            {% for signal in signals %}
+
+            <div class="signal-card">
+
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+
+                    <div>
+
+                        <div class="signal-title">
+
+                            {{ signal.market_slug }}
+
+                        </div>
+
+                        <div class="signal-outcome">
+
+                            {{ signal.outcome }}
+
+                        </div>
+
+                    </div>
+
+                    <div
+                        style="
+                        background:#00d08422;
+                        color:#00d084;
+                        padding:6px 14px;
+                        border-radius:999px;
+                        font-size:13px;
+                        font-weight:600;
+                        "
+                    >
+
+                        {{ signal.conviction_level }}
+
+                    </div>
+
+                </div>
+
+
+                <div style="margin:18px 0 8px;">
+
+                    <div
+                        style="
+                        display:flex;
+                        justify-content:space-between;
+                        margin-bottom:8px;
+                        font-size:13px;
+                        color:#95a5bd;
+                        "
+                    >
+
+                        <span>Confidence</span>
+
+                        <span>{{ signal.conviction_score }}%</span>
+
+                    </div>
+
+                    <div
+                        style="
+                        height:10px;
+                        background:#1b2331;
+                        border-radius:999px;
+                        overflow:hidden;
+                        "
+                    >
+
+                        <div
+                            style="
+                            height:100%;
+                            width:{{ signal.conviction_score }}%;
+                            background:linear-gradient(90deg,#00d084,#4da3ff);
+                            ">
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    style="
+                    display:grid;
+                    grid-template-columns:repeat(4,1fr);
+                    gap:16px;
+                    margin-top:18px;
+                    "
+                ><div
+    style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+    color:#95a5bd;
+    font-size:13px;
+    "
+>
+    <div>Updated moments ago</div>
+
+    <a
+        href="/signals/{{ signal.signal_uuid }}"
+        style="
+        color:#4da3ff;
+        text-decoration:none;
+        font-weight:600;
+        "
+    >
+        View →
+    </a>
+</div>
+
+
+                    <div>
+
+                        <small>Wallets</small>
+
+                        <h3>{{ signal.wallet_count }}</h3>
+
+                    </div>
+
+                    <div>
+
+                        <small>Pressure</small>
+
+                        <h3>{{ signal.pressure_score }}</h3>
+
+                    </div>
+
+                    <div>
+
+                        <small>Conviction</small>
+
+                        <h3>{{ signal.conviction_score }}</h3>
+
+                    </div>
+
+                    <div>
+
+                        <small>Opposition</small>
+
+                        <h3>{{ signal.opposition_level }}</h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>Recent Activity</h2>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Signal Strengthened</div>
+
+                <div>Now</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Elite Wallet Joined</div>
+
+                <div>1m</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Signal Created</div>
+
+                <div>3m</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Market Updated</div>
+
+                <div>5m</div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div>
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>Engine Health</h2>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Markets Collector</div>
+
+                <div style="color:#00d084;">●</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Trade Collector</div>
+
+                <div style="color:#00d084;">●</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Outcome Collector</div>
+
+                <div style="color:#00d084;">●</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Signal Engine</div>
+
+                <div style="color:#00d084;">●</div>
+
+            </div>
+
+            <div class="wallet-row">
+
+                <div>Scheduler</div>
+
+                <div style="color:#00d084;">●</div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>Top Wallets</h2>
+
+            </div>
+
+            {% for wallet in wallets[:8] %}
+
+            <div class="wallet-row">
+
+                <div>
+
+                    <strong>#{{ loop.index }}</strong><br>
+
+                    {{ wallet.wallet_address[:10] }}...
+
+                </div>
+
+                <div style="text-align:right;">
+
+                    <strong>{{ wallet.score }}</strong><br>
+
+                    <small>Nexora Score</small>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>Trending Markets</h2>
+
+            </div>
+
+            {% for market in markets[:6] %}
+
+            <div class="wallet-row">
+
+                <div>
+
+                    {{ market.slug[:30] }}
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

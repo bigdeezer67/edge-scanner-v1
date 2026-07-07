@@ -5,7 +5,6 @@ import uuid
 from core.database import get_connection
 from analysis.conviction import calculate_conviction
 
-
 ACTIVE_STATUSES = ["NEW", "BUILDING", "CONFIRMED", "STRONG", "WEAKENING"]
 
 

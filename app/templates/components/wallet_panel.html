@@ -1,0 +1,49 @@
+<div class="panel">
+
+<div class="panel-header">
+
+<h2>
+
+Top Smart Wallets
+
+</h2>
+
+</div>
+
+{% for wallet in wallets[:10] %}
+
+<div class="wallet-card hover-card">
+
+<div class="wallet-rank">
+
+#{{ loop.index }}
+
+</div>
+
+<div class="wallet-body">
+
+<div class="wallet-address">
+
+{{ wallet.wallet_address[:12] }}...
+
+</div>
+
+<div class="wallet-score">
+
+Nexora Score
+
+<strong>
+
+{{ wallet.score }}
+
+</strong>
+
+</div>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>

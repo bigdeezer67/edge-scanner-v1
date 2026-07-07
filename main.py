@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from core.database import db_stats
 from app.services.market_cache import CACHE
@@ -10,7 +11,16 @@ from app.routers.wallets import router as wallets_router
 from app.routers.intelligence import router as intelligence_router
 from app.routers.system import router as system_router
 
-app = FastAPI(title="Nexora")
+app = FastAPI(
+    title="Nexora",
+    version="2.0",
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static",
+)
 
 app.include_router(dashboard_router)
 app.include_router(markets_router)
