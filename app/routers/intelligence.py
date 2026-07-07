@@ -17,6 +17,7 @@ from engines.signal_engine import (
     get_signal_history,
     get_signal_by_uuid,
     get_top_signals,
+    get_recent_signal_events,
     get_trending_signals,
 )
 
@@ -54,6 +55,9 @@ def api_opposition():
         limit=25,
     )
 
+@router.get("/api/signals/events/recent")
+def api_recent_signal_events():
+    return get_recent_signal_events(limit=25)
 
 @router.get("/api/conviction")
 def api_conviction():
@@ -132,7 +136,7 @@ def api_trending_signals():
 
 
 @router.get("/api/signals/expired")
-def api_expired():
+def api_expired(limit: int = 100):
     conn = get_connection()
     cur = conn.cursor()
 
@@ -142,7 +146,7 @@ def api_expired():
         FROM signals
         WHERE status='EXPIRED'
         ORDER BY updated_at DESC
-        LIMIT 100
+        LIMIT ?
         """
     )
 
@@ -156,7 +160,7 @@ def api_expired():
 
 
 @router.get("/api/signals/resolved")
-def api_resolved():
+def api_resolved(limit: int = 100):
     conn = get_connection()
     cur = conn.cursor()
 

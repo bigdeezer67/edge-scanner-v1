@@ -559,3 +559,33 @@ def resolve_finished_markets():
     conn.close()
 
     return resolved
+
+def get_recent_signal_events(limit: int = 25):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            e.*,
+            s.market_slug,
+            s.outcome,
+            s.status
+        FROM signal_events e
+        LEFT JOIN signals s
+            ON e.signal_uuid = s.signal_uuid
+        ORDER BY e.created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+    events = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    return {
+        "status": "ok",
+        "events_found": len(events),
+        "events": events,
+        "timestamp": int(time.time()),
+    }
