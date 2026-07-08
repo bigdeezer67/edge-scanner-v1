@@ -18,7 +18,15 @@
         <div class="panel">
             <div class="panel-header">
                 <h2>Wallet Intelligence</h2>
-                <span class="status-pill">TRACKED</span>
+                {% if wallet.score >= 90 %}
+                    <span class="status-pill">🏆 ELITE</span>
+                {% elif wallet.score >= 75 %}
+                    <span class="status-pill">🔥 HOT</span>
+                {% elif wallet.score >= 50 %}
+                    <span class="status-pill">_TRACKED</span>
+                {% else %}
+                    <span class="status-pill">WATCHLIST</span>
+                {% endif %}
             </div>
 
             <div class="signal-grid">
@@ -46,6 +54,51 @@
 
         <div class="panel">
             <div class="panel-header">
+                <h2>Wallet Signals</h2>
+            </div>
+
+            {% for signal in signals %}
+            <div class="signal-card">
+
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+
+                    <div>
+
+                        <div class="signal-title">
+
+                            {{ signal.market_slug }}
+
+                        </div>
+
+                        <small>{{ signal.outcome }}</small>
+
+                    </div>
+
+                    <div style="text-align:right;">
+
+                        <strong>{{ signal.confidence }}%</strong><br>
+
+                        <small>Confidence</small>
+
+                    </div>
+
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Wallet Performance</h2>
+            </div>
+
+            <div class="chart-wrap">
+                <canvas id="walletPerformanceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
                 <h2>Recent Trades</h2>
             </div>
 
@@ -62,19 +115,6 @@
                 </div>
             </div>
             {% endfor %}
-        </div>
-
-        <div class="panel">
-            <div class="panel-header">
-                <h2>AI Wallet Read</h2>
-            </div>
-
-            <p class="ai-explanation">
-                Nexora is tracking this wallet because it has participated in prediction market activity.
-                It currently has a Nexora Score of <strong>{{ wallet.score }}</strong>, a win rate of
-                <strong>{{ wallet.win_rate }}%</strong>, ROI of <strong>{{ wallet.roi }}%</strong>, and
-                <strong>{{ wallet.total_trades }}</strong> total tracked trades.
-            </p>
         </div>
 
     </div>
@@ -116,8 +156,64 @@
             {% endfor %}
         </div>
 
+        <div class="panel">
+            <div class="panel-header">
+                <h2>AI Wallet Read</h2>
+            </div>
+
+            <p class="ai-explanation">
+                Nexora is tracking this wallet because it has participated in prediction market activity.
+                It currently has a Nexora Score of <strong>{{ wallet.score }}</strong>, a win rate of
+                <strong>{{ wallet.win_rate }}%</strong>, ROI of <strong>{{ wallet.roi }}%</strong>, and
+                <strong>{{ wallet.total_trades }}</strong> total tracked trades.
+            </p>
+        </div>
+
     </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const walletLabels = [
+    {% for point in performance %}
+        "{{ point.index }}",
+    {% endfor %}
+];
+
+const walletPerformance = [
+    {% for point in performance %}
+        {{ point.pnl }},
+    {% endfor %}
+];
+
+const walletCtx = document.getElementById("walletPerformanceChart");
+
+if (walletCtx) {
+    new Chart(walletCtx, {
+        type: "line",
+        data: {
+            labels: walletLabels,
+            datasets: [{
+                label: "Cumulative P/L",
+                data: walletPerformance,
+                tension: 0.35,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+</script>
 
 {% endblock %}

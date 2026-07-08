@@ -9,7 +9,11 @@ from engines.signal_engine import (
 
 from engines.signal_engine import get_signal_wallets
 from core.database import db_stats
-from core.wallets import get_top_wallets, get_wallet_profile
+from core.wallets import (
+    get_top_wallets,
+    get_wallet_profile,
+    get_wallet_performance,
+)
 from analysis.outcomes import get_resolved_markets
 from app.services.market_cache import CACHE, refresh_markets
 
@@ -108,6 +112,7 @@ def signal_detail(request: Request, signal_uuid: str):
 @router.get("/wallets/{wallet_address}")
 def wallet_detail(request: Request, wallet_address: str):
     profile = get_wallet_profile(wallet_address)
+    performance = get_wallet_performance(wallet_address, limit=50)
 
     if not profile:
         wallet = {
@@ -134,6 +139,7 @@ def wallet_detail(request: Request, wallet_address: str):
                 "recent_trades": [],
                 "favorite_markets": [],
                 "signals": [],
+                "performance": performance,
             },
         )
 
@@ -145,5 +151,17 @@ def wallet_detail(request: Request, wallet_address: str):
             "recent_trades": profile["recent_trades"],
             "favorite_markets": profile["favorite_markets"],
             "signals": [],
+            "performance": performance,
+        },
+    )
+@router.get("/wallet-rankings")
+def wallet_rankings(request: Request):
+    wallets = get_top_wallets(limit=100)
+
+    return templates.TemplateResponse(
+        "wallet_rankings.html",
+        {
+            "request": request,
+            "wallets": wallets,
         },
     )

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<header class="topbar">
+    <div>
+        <h1>MARKET DETAIL</h1>
+        <p>{{ market.slug }}</p>
+    </div>
+
+    <a class="view-link" href="/">← Back</a>
+</header>
+
+<div class="dashboard-grid">
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>{{ market.question }}</h2>
+                {% if market.resolved %}
+                    <span class="status-pill">RESOLVED</span>
+                {% else %}
+                    <span class="status-pill">LIVE</span>
+                {% endif %}
+            </div>
+
+            <div class="signal-grid">
+                <div class="signal-metric">
+                    <label>Volume</label>
+                    <strong>{{ market.volume }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Liquidity</label>
+                    <strong>{{ market.liquidity }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Active</label>
+                    <strong>{{ market.active }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Closed</label>
+                    <strong>{{ market.closed }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Related Signals</h2>
+            </div>
+
+            {% for signal in signals %}
+            <div class="wallet-row">
+                <div>
+                    <a
+                        href="/signals/{{ signal.signal_uuid }}"
+                        style="color:#4da3ff;text-decoration:none;font-weight:600;"
+                    >
+                        {{ signal.outcome }}
+                    </a>
+                    <br>
+                    <small>{{ signal.status }}</small>
+                </div>
+
+                <div style="text-align:right;">
+                    <strong>{{ signal.confidence }}</strong><br>
+                    <small>Confidence</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Resolution</h2>
+            </div>
+
+            <div class="system-item"><div>Resolved</div><strong>{{ market.resolved }}</strong></div>
+            <div class="system-item"><div>Winning Outcome</div><strong>{{ market.winning_outcome }}</strong></div>
+            <div class="system-item"><div>Resolved At</div><strong>{{ market.resolved_at }}</strong></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Recent Trades</h2>
+            </div>
+
+            {% for trade in trades %}
+            <div class="wallet-row">
+                <div>
+                    <strong>{{ trade.wallet_address[:10] }}...</strong><br>
+                    <small>{{ trade.side }} {{ trade.outcome }}</small>
+                </div>
+
+                <div style="text-align:right;">
+                    <strong>{{ trade.price }}</strong><br>
+                    <small>Size {{ trade.size }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

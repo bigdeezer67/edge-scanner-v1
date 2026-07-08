@@ -116,3 +116,53 @@ def get_wallet_profile(wallet_address: str):
         "recent_trades": recent_trades,
         "favorite_markets": favorite_markets,
     }
+
+def get_wallet_performance(wallet_address: str, limit: int = 50):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            timestamp,
+            price,
+            size,
+            won,
+            resolved
+        FROM trades
+        WHERE wallet_address = ?
+        ORDER BY timestamp ASC
+        LIMIT ?
+        """,
+        (wallet_address, limit),
+    )
+
+    trades = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    performance = []
+    cumulative = 0
+
+    for index, trade in enumerate(trades, start=1):
+        price = trade["price"] or 0
+        size = trade["size"] or 0
+
+        if trade["resolved"] == 1:
+            if trade["won"] == 1:
+                pnl = (1 - price) * size
+            else:
+                pnl = -price * size
+        else:
+            pnl = 0
+
+        cumulative += pnl
+
+        performance.append(
+            {
+                "index": index,
+                "timestamp": trade["timestamp"],
+                "pnl": round(cumulative, 4),
+            }
+        )
+
+    return performance

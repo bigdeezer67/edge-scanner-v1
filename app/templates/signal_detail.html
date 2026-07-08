@@ -86,7 +86,18 @@
                 <h2>Market Intelligence</h2>
             </div>
 
-            <div class="system-item"><div>Market</div><strong>{{ signal.market_slug }}</strong></div>
+            <div class="system-item">
+    <div>Market</div>
+    <strong>
+        <a
+            href="/markets/{{ signal.condition_id }}"
+            style="color:#4da3ff;text-decoration:none;"
+        >
+            {{ signal.market_slug }}
+        </a>
+    </strong>
+</div>
+
             <div class="system-item"><div>Outcome</div><strong>{{ signal.outcome }}</strong></div>
             <div class="system-item"><div>Side</div><strong>{{ signal.side }}</strong></div>
             <div class="system-item"><div>Avg Entry</div><strong>{{ signal.avg_entry }}</strong></div>

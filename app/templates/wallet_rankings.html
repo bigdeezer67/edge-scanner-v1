@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<header class="topbar">
+    <div>
+        <h1>WALLET RANKINGS</h1>
+        <p>Top tracked smart-money wallets</p>
+    </div>
+
+    <a class="view-link" href="/">← Back</a>
+</header>
+
+<div class="panel">
+    <div class="panel-header">
+        <h2>Leaderboard</h2>
+        <span>{{ wallets|length }} Wallets</span>
+    </div>
+
+    {% for wallet in wallets %}
+    <div class="wallet-row">
+        <div>
+            <strong>#{{ loop.index }}</strong>
+            &nbsp;
+            <a
+                href="/wallets/{{ wallet.wallet_address }}"
+                style="color:#4da3ff;text-decoration:none;font-weight:600;"
+            >
+                {{ wallet.wallet_address[:14] }}...
+            </a>
+            <br>
+            <small>{{ wallet.total_trades }} trades · {{ wallet.unique_markets }} markets</small>
+        </div>
+
+        <div style="text-align:right;">
+            <strong>{{ wallet.score }}</strong><br>
+            <small>{{ wallet.win_rate }}% WR · {{ wallet.roi }}% ROI</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
