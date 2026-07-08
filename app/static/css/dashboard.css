@@ -618,3 +618,13 @@ transform:scale(.8);
 .timeline-event strong {
     color: var(--text);
 }
+
+.chart-wrap {
+    height: 260px;
+    width: 100%;
+}
+
+#confidenceChart {
+    width: 100% !important;
+    height: 260px !important;
+}

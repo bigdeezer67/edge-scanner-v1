@@ -589,3 +589,62 @@ def get_recent_signal_events(limit: int = 25):
         "events": events,
         "timestamp": int(time.time()),
     }
+
+def get_signal_wallets(signal_uuid: str, limit: int = 15):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT condition_id, outcome
+        FROM signals
+        WHERE signal_uuid = ?
+        """,
+        (signal_uuid,),
+    )
+
+    signal = cur.fetchone()
+
+    if not signal:
+        conn.close()
+        return {
+            "status": "not_found",
+            "wallets": [],
+        }
+
+    cur.execute(
+        """
+        SELECT
+            t.wallet_address,
+            t.price,
+            t.size,
+            t.timestamp,
+            w.score,
+            w.win_rate,
+            w.roi,
+            w.total_trades
+        FROM trades t
+        LEFT JOIN wallets w
+            ON t.wallet_address = w.wallet_address
+        WHERE t.condition_id = ?
+          AND t.outcome = ?
+          AND t.side = 'BUY'
+        ORDER BY w.score DESC, t.size DESC
+        LIMIT ?
+        """,
+        (
+            signal["condition_id"],
+            signal["outcome"],
+            limit,
+        ),
+    )
+
+    wallets = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    return {
+        "status": "ok",
+        "wallets_found": len(wallets),
+        "wallets": wallets,
+        "timestamp": int(time.time()),
+    }

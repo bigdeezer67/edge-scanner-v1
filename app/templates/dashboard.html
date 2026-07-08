@@ -200,45 +200,60 @@
 
         <div class="panel">
 
-            <div class="panel-header">
+    <div class="panel-header">
 
-                <h2>Recent Activity</h2>
+        <h2>Recent Activity</h2>
 
-            </div>
+    </div>
 
-            <div class="wallet-row">
+    {% if recent_events %}
 
-                <div>Signal Strengthened</div>
+        {% for event in recent_events %}
 
-                <div>Now</div>
+        <div class="wallet-row">
 
-            </div>
+            <div>
 
-            <div class="wallet-row">
+                <strong>{{ event.event_type }}</strong><br>
 
-                <div>Elite Wallet Joined</div>
-
-                <div>1m</div>
-
-            </div>
-
-            <div class="wallet-row">
-
-                <div>Signal Created</div>
-
-                <div>3m</div>
+                <small>
+                    {{ event.market_slug }}
+                </small>
 
             </div>
 
-            <div class="wallet-row">
+            <div style="text-align:right;">
 
-                <div>Market Updated</div>
+                <strong>
+                    {{ event.new_status }}
+                </strong><br>
 
-                <div>5m</div>
+                <small>
+                    {{ event.new_confidence }}%
+                </small>
 
             </div>
 
         </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="wallet-row">
+
+            <div>
+
+                No recent signal events.
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
 
     </div>
 

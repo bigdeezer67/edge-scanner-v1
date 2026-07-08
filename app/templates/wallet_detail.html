@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<header class="topbar">
+    <div>
+        <h1>WALLET PROFILE</h1>
+        <p>{{ wallet.wallet_address }}</p>
+    </div>
+
+    <a class="view-link" href="/">← Back</a>
+</header>
+
+<div class="dashboard-grid">
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Wallet Intelligence</h2>
+                <span class="status-pill">TRACKED</span>
+            </div>
+
+            <div class="signal-grid">
+                <div class="signal-metric">
+                    <label>Nexora Score</label>
+                    <strong>{{ wallet.score }}</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Win Rate</label>
+                    <strong>{{ wallet.win_rate }}%</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>ROI</label>
+                    <strong>{{ wallet.roi }}%</strong>
+                </div>
+
+                <div class="signal-metric">
+                    <label>Total Trades</label>
+                    <strong>{{ wallet.total_trades }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Recent Trades</h2>
+            </div>
+
+            {% for trade in recent_trades %}
+            <div class="wallet-row">
+                <div>
+                    <strong>{{ trade.market_slug }}</strong><br>
+                    <small>{{ trade.side }} {{ trade.outcome }}</small>
+                </div>
+
+                <div style="text-align:right;">
+                    <strong>{{ trade.price }}</strong><br>
+                    <small>Size {{ trade.size }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>AI Wallet Read</h2>
+            </div>
+
+            <p class="ai-explanation">
+                Nexora is tracking this wallet because it has participated in prediction market activity.
+                It currently has a Nexora Score of <strong>{{ wallet.score }}</strong>, a win rate of
+                <strong>{{ wallet.win_rate }}%</strong>, ROI of <strong>{{ wallet.roi }}%</strong>, and
+                <strong>{{ wallet.total_trades }}</strong> total tracked trades.
+            </p>
+        </div>
+
+    </div>
+
+    <div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Wallet Stats</h2>
+            </div>
+
+            <div class="system-item"><div>Wins</div><strong>{{ wallet.wins }}</strong></div>
+            <div class="system-item"><div>Losses</div><strong>{{ wallet.losses }}</strong></div>
+            <div class="system-item"><div>Avg Entry</div><strong>{{ wallet.avg_price }}</strong></div>
+            <div class="system-item"><div>Avg Size</div><strong>{{ wallet.avg_size }}</strong></div>
+            <div class="system-item"><div>Total Size</div><strong>{{ wallet.total_size }}</strong></div>
+            <div class="system-item"><div>Unique Markets</div><strong>{{ wallet.unique_markets }}</strong></div>
+            <div class="system-item"><div>First Seen</div><strong>{{ wallet.first_seen }}</strong></div>
+            <div class="system-item"><div>Last Seen</div><strong>{{ wallet.last_seen }}</strong></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Favorite Markets</h2>
+            </div>
+
+            {% for market in favorite_markets %}
+            <div class="wallet-row">
+                <div>
+                    <strong>{{ market.market_slug }}</strong><br>
+                    <small>{{ market.trade_count }} trades</small>
+                </div>
+
+                <div style="text-align:right;">
+                    <strong>{{ market.total_size }}</strong><br>
+                    <small>Total Size</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
